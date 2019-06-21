@@ -24,7 +24,10 @@ namespace Microsoft.SharePoint.Client
                 : ListTemplateType.GenericList
             );
 
-            listCreationInfo.Url = internalName;
+            if (documentLibrary)
+                listCreationInfo.Url = internalName;
+            else
+                listCreationInfo.Url = "Lists/" + internalName;
 
             List list = clientContext.Web.Lists.Add(listCreationInfo);
 
