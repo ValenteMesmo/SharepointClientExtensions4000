@@ -23,7 +23,6 @@ namespace Microsoft.SharePoint.Client
         {
             var props = itemProperties?.GetType().GetProperties();
 
-
             ListItem newItem = list.AddItem(new ListItemCreationInformation());
             foreach (var pair in props)
                 newItem[pair.Name] = pair.GetValue(itemProperties);
@@ -32,9 +31,21 @@ namespace Microsoft.SharePoint.Client
             await list.Context.AsClientContext().ExecuteQueryAsync();
         }
 
-        public static async Task<IList<ListItem>> GetAllItems(this List list)
+        private static int OneIfZero(this int value)
         {
+            if (value == 0)
+                return 1;
+            return value;
+        }
+
+        public static async Task<IList<ListItem>> GetAllItems(this List list, IProgress<int> progress = null)
+        {
+            if (progress == null)
+                progress = new Progress<int>();
+
             var context = list.Context.AsClientContext();
+            context.Load(list, f => f.ItemCount);
+            await context.ExecuteQueryAsync();
 
             ListItemCollectionPosition itemPosition = null;
             var result = new List<ListItem>();
@@ -63,66 +74,48 @@ namespace Microsoft.SharePoint.Client
 
                 foreach (ListItem item in itemCollection)
                     result.Add(item);
+                
+                progress.Report((result.Count / list.ItemCount.OneIfZero()) * 100);
 
                 if (itemPosition == null)
                     break;
             }
 
+            progress.Report(100);
+
             return result;
         }
 
-        public static async Task DeleteAllItems(this List list, IProgress<int> progress)
+        public static async Task DeleteAllItems(this List list, IProgress<int> progress = null)
         {
+            if (progress == null)
+                progress = new Progress<int>();
+
             var clientContext = list.Context.AsClientContext();
 
-            clientContext.Load(list, f=> f.ItemCount);
+            clientContext.Load(list, f => f.ItemCount);
             await clientContext.ExecuteQueryAsync();
 
-            var queryLimit = 4000;
             var batchLimit = 100;
-            var moreItems = true;
-
-            var camlQuery = new CamlQuery
-            {
-                ViewXml = string.Format(@"
-                <View>
-                    <Query><Where></Where></Query>
-                    <ViewFields>
-                        <FieldRef Name='ID' />
-                    </ViewFields>
-                    <RowLimit>{0}</RowLimit>
-                </View>", queryLimit)
-            };
 
             var deletedItems = 0;
-            while (moreItems)
+            var listItems = await list.GetAllItems(new Progress<int>(f => progress.Report(f / 2)));
+
+            if (listItems.Count > 0)
             {
-                var listItems = list.GetItems(camlQuery);
-
-                clientContext.Load(listItems,
-                    eachItem => eachItem.Include(
-                        item => item,
-                        item => item["ID"]));
-
-                await clientContext.ExecuteQueryAsync();
-
-                var totalListItems = listItems.Count;
-                if (totalListItems > 0)
+                for (var i = listItems.Count - 1; i > -1; i--)
                 {
-                    for (var i = totalListItems - 1; i > -1; i--)
-                    {
-                        listItems[i].DeleteObject();
-                        if (i % batchLimit == 0)
-                            await clientContext.ExecuteQueryAsync();
-                        deletedItems++;
-                        progress.Report((deletedItems / list.ItemCount) * 100);
-                    }
-                    //why???
-                    await clientContext.ExecuteQueryAsync();
+                    listItems[i].DeleteObject();
+                    if (i % batchLimit == 0)
+                        await clientContext.ExecuteQueryAsync();
+                    deletedItems++;
+                    
+                    progress.Report((100 + ((deletedItems / list.ItemCount.OneIfZero()) * 100)) / 2);
                 }
-                else
-                    moreItems = false;
+                await clientContext.ExecuteQueryAsync();
             }
+
+            progress.Report(100);
         }
     }
 }
