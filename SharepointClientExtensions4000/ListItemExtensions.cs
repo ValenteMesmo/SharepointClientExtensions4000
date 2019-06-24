@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Microsoft.SharePoint.Client
@@ -116,6 +117,153 @@ namespace Microsoft.SharePoint.Client
             }
 
             progress.Report(100);
+        }
+
+        //https://docs.microsoft.com/en-us/sharepoint/dev/solution-guidance/upload-large-files-sample-app-for-sharepoint
+        public static async Task<File> UploadFile(
+            this List library,
+            string relativeUrl,
+            byte[] content,
+            int fileChunkSizeInMB = 3,
+            IProgress<int> progress = null
+        )
+        {
+
+            if (progress == null)
+                progress = new Progress<int>();
+
+            string filename = Path.GetFileName(relativeUrl);
+
+            var uploadId = Guid.NewGuid();
+            var fileName = Path.GetFileName(filename);
+
+            if (relativeUrl[0] != '/')
+                relativeUrl = "/" + relativeUrl;
+
+            library.Context.Load(library.RootFolder, f => f.ServerRelativeUrl);
+            await library.Context.ExecuteQueryAsync();
+
+            Folder folder;
+            var folderPath = Path.GetDirectoryName(relativeUrl);
+            if (folderPath == "\\")
+            {
+                folder = library.RootFolder;
+            }
+            else
+            {
+                folder = library.RootFolder.Folders.GetByUrl(library.RootFolder.ServerRelativeUrl + folderPath.Replace("\\", "/"));
+                library.Context.Load(folder);
+                await library.Context.ExecuteQueryAsync();
+            }
+
+            File uploadFile = null;
+
+            var blockSize = fileChunkSizeInMB * 1024 * 1024;
+
+            var fileSize = content.Length;
+
+            progress.Report(0);
+            if (fileSize <= blockSize)
+            {
+                var fileInfo = new FileCreationInformation
+                {
+                    ContentStream = new MemoryStream(content),
+                    Url = fileName,
+                    Overwrite = true
+                };
+
+                uploadFile = folder.Files.Add(fileInfo);
+                library.Context.Load(uploadFile);
+                progress.Report(100);
+                await library.Context.ExecuteQueryAsync();
+                return uploadFile;
+            }
+            else
+            {
+                ClientResult<long> bytesUploaded = null;
+
+                using (Stream stream = new MemoryStream(content))
+                {
+                    stream.Position = 0;
+                    using (var binaryReader = new BinaryReader(stream))
+                    {
+                        var buffer = new byte[blockSize];
+                        byte[] lastBuffer = null;
+                        long fileoffset = 0;
+                        long totalBytesRead = 0;
+                        int bytesRead;
+                        var first = true;
+                        var last = false;
+
+                        while ((bytesRead = binaryReader.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            totalBytesRead = totalBytesRead + bytesRead;
+                            progress.Report((int)((totalBytesRead / fileSize.OneIfZero()) * 100));
+
+                            if (totalBytesRead == fileSize)
+                            {
+                                last = true;
+                                lastBuffer = new byte[bytesRead];
+                                Array.Copy(buffer, 0, lastBuffer, 0, bytesRead);
+                            }
+
+                            if (first)
+                            {
+                                using (var contentStream = new MemoryStream())
+                                {
+                                    var fileInfo = new FileCreationInformation
+                                    {
+                                        ContentStream = contentStream,
+                                        Url = fileName,
+                                        Overwrite = true
+                                    };
+
+                                    uploadFile = folder.Files.Add(fileInfo);
+
+                                    using (var memoryStream = new MemoryStream(buffer))
+                                    {
+                                        memoryStream.Position = 0;
+                                        bytesUploaded = uploadFile.StartUpload(uploadId, memoryStream);
+                                        await library.Context.ExecuteQueryAsync();
+                                        fileoffset = bytesUploaded.Value;
+                                    }
+
+                                    first = false;
+                                }
+                            }
+                            else
+                            {
+                                uploadFile = library.ParentWeb.GetFileByServerRelativeUrl(folder.ServerRelativeUrl + Path.AltDirectorySeparatorChar + fileName);
+
+                                if (last)
+                                {
+                                    using (var memoryStream = new MemoryStream(lastBuffer))
+                                    {
+                                        memoryStream.Position = 0;
+                                        uploadFile = uploadFile.FinishUpload(uploadId, fileoffset, memoryStream);
+                                        await library.Context.ExecuteQueryAsync();
+                                        return uploadFile;
+                                    }
+                                }
+                                else
+                                {
+                                    using (var memoryStream = new MemoryStream(buffer))
+                                    {
+                                        memoryStream.Position = 0;
+                                        bytesUploaded = uploadFile.ContinueUpload(uploadId, fileoffset, memoryStream);
+                                        await library.Context.ExecuteQueryAsync();
+                                        fileoffset = bytesUploaded.Value;
+                                    }
+                                }
+                            }
+                        }
+
+                        progress.Report(100);
+                    }
+                }
+            }
+
+            return uploadFile;
         }
     }
 }
