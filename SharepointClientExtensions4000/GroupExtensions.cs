@@ -29,6 +29,17 @@ namespace Microsoft.SharePoint.Client
             await clientContext.ExecuteQueryAsync();
         }
 
+        public static async Task DeleteGroup(this ClientContext clientContext, string name)
+        {
+            if (!await clientContext.GroupExists(name))
+                return;
+
+            var group = await clientContext.GetGroup(name);
+            clientContext.Web.SiteGroups.Remove(group);
+            await clientContext.ExecuteQueryAsync();
+        }
+
+
         public static async Task<Group> GetGroup(this ClientContext clientContext, string name)
         {
             var groups = clientContext.LoadQuery(
