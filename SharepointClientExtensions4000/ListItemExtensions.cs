@@ -39,6 +39,16 @@ namespace Microsoft.SharePoint.Client
             return value;
         }
 
+        public static async Task SetFieldDefaultValue(this List list, string fieldName, string defaultValue)
+        {
+            var clientContext = list.Context.AsClientContext();
+            Field field = list.Fields.GetByTitle(fieldName);
+            field.DefaultValue = defaultValue;
+            field.Update();
+            clientContext.Load(field);
+            await clientContext.ExecuteQueryAsync();
+        }
+
         public static async Task<IList<ListItem>> GetAllItems(this List list, IProgress<int> progress = null)
         {
             if (progress == null)
@@ -75,7 +85,7 @@ namespace Microsoft.SharePoint.Client
 
                 foreach (ListItem item in itemCollection)
                     result.Add(item);
-                
+
                 progress.Report((result.Count / list.ItemCount.OneIfZero()) * 100);
 
                 if (itemPosition == null)
@@ -110,7 +120,7 @@ namespace Microsoft.SharePoint.Client
                     if (i % batchLimit == 0)
                         await clientContext.ExecuteQueryAsync();
                     deletedItems++;
-                    
+
                     progress.Report((100 + ((deletedItems / list.ItemCount.OneIfZero()) * 100)) / 2);
                 }
                 await clientContext.ExecuteQueryAsync();
