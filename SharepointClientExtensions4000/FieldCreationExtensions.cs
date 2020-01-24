@@ -2,11 +2,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.SharePoint.Client
 {
+    public static class SecureStringExtensions
+    {
+        public static SecureString ToSecureString(this string value)
+        {
+            var secure = new SecureString();
+
+            foreach (char c in value)
+                secure.AppendChar(c);
+
+            return secure;
+        }
+    }
+
     public static class FieldCreationExtensions
     {
 
@@ -57,6 +71,13 @@ namespace Microsoft.SharePoint.Client
             field.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+        }
+
+        public static async Task SetAttachmentEnabled(this List list, bool value)
+        {
+            list.EnableAttachments = value;
+            list.Update();
+            await list.Context.ExecuteQueryAsync();
         }
 
         public static async Task CreateChoiceField(
