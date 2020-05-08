@@ -2,29 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.SharePoint.Client
 {
-    public static class SecureStringExtensions
-    {
-        public static SecureString ToSecureString(this string value)
-        {
-            var secure = new SecureString();
-
-            foreach (char c in value)
-                secure.AppendChar(c);
-
-            return secure;
-        }
-    }
-
     public static class FieldCreationExtensions
     {
+        public static async Task<FieldText> AddTextField(this List list, string fieldDisplayName) =>
+            await AddTextField(list, fieldDisplayName, fieldDisplayName);
 
-        public static async Task CreateTextField(
+        public static async Task<FieldText> AddTextField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -47,9 +36,14 @@ namespace Microsoft.SharePoint.Client
             textField.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return textField;
         }
 
-        public static async Task CreateDateField(
+        public static async Task<Field> AddDateField(this List list, string fieldDisplayName) =>
+            await AddDateField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<Field> AddDateField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -71,6 +65,8 @@ namespace Microsoft.SharePoint.Client
             field.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return field;
         }
 
         public static async Task SetAttachmentEnabled(this List list, bool value)
@@ -80,7 +76,10 @@ namespace Microsoft.SharePoint.Client
             await list.Context.ExecuteQueryAsync();
         }
 
-        public static async Task CreateChoiceField(
+        public static async Task<Field> AddChoiceField(this List list, string fieldDisplayName, params string[] choices) =>
+            await AddChoiceField(list, fieldDisplayName, fieldDisplayName, choices);
+
+        public static async Task<Field> AddChoiceField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -109,9 +108,14 @@ namespace Microsoft.SharePoint.Client
             field.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return field;
         }
 
-        public static async Task CreateRichTextField(
+        public static async Task<FieldMultiLineText> AddRichTextField(this List list, string fieldDisplayName) =>
+            await AddRichTextField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<FieldMultiLineText> AddRichTextField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -134,9 +138,14 @@ namespace Microsoft.SharePoint.Client
             textField.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return textField;
         }
 
-        public static async Task CreateNoteField(
+        public static async Task<FieldMultiLineText> AddNoteField(this List list, string fieldDisplayName) =>
+            await AddNoteField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<FieldMultiLineText> AddNoteField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -159,9 +168,14 @@ namespace Microsoft.SharePoint.Client
             textField.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return textField;
         }
 
-        public static async Task CreateBooleanField(
+        public static async Task<Field> AddBooleanField(this List list, string fieldDisplayName) =>
+            await AddBooleanField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<Field> AddBooleanField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -181,10 +195,14 @@ namespace Microsoft.SharePoint.Client
             field.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return field;
         }
 
-        //TODO: reaname to field
-        public static async Task AddColumnDateTime(
+        public static async Task<Field> AddDateTimeField(this List list, string fieldDisplayName) =>
+            await AddDateTimeField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<Field> AddDateTimeField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -205,10 +223,14 @@ namespace Microsoft.SharePoint.Client
             field.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return field;
         }
 
-        //TODO: reaname to field
-        public static async Task AddColumnNumber(
+        public static async Task<FieldNumber> AddNumberField(this List list, string fieldDisplayName) =>
+            await AddNumberField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<FieldNumber> AddNumberField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -230,9 +252,11 @@ namespace Microsoft.SharePoint.Client
             numberField.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return numberField;
         }
 
-        internal static async Task CreateLookupField(
+        private static async Task<FieldLookup> AddLookupField(
             this List list
             , string targetListDisplayName
             , string internalFieldName
@@ -259,21 +283,29 @@ namespace Microsoft.SharePoint.Client
             lookupField.AllowMultipleValues = AllowMultipleValues;
             field.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return lookupField;
         }
 
-        public static async Task CreateLookupField(
-            this List list
-            , string targetListDisplayName
-            , string internalFieldName
-            , string displayFieldName) =>
-            await CreateLookupField(list, targetListDisplayName, internalFieldName, displayFieldName, AllowMultipleValues: false);
+        public static async Task<FieldLookup> AddLookupField(this List list, string targetListDisplayName, string displayFieldName) =>
+            await AddLookupField(list, targetListDisplayName, displayFieldName, displayFieldName);
 
-        public static async Task CreateLookupMultiField(
+        public static async Task<FieldLookup> AddLookupField(
             this List list
             , string targetListDisplayName
             , string internalFieldName
             , string displayFieldName) =>
-         await CreateLookupField(list, targetListDisplayName, internalFieldName, displayFieldName, AllowMultipleValues: true);
+            await AddLookupField(list, targetListDisplayName, internalFieldName, displayFieldName, AllowMultipleValues: false);
+
+        public static async Task<FieldLookup> AddLookupMultiField(this List list, string targetListDisplayName, string displayFieldName) =>
+            await AddLookupMultiField(list, targetListDisplayName, displayFieldName, displayFieldName);
+
+        public static async Task<FieldLookup> AddLookupMultiField(
+            this List list
+            , string targetListDisplayName
+            , string internalFieldName
+            , string displayFieldName) =>
+         await AddLookupField(list, targetListDisplayName, internalFieldName, displayFieldName, AllowMultipleValues: true);
 
         public static async Task<bool> ContainsField(this List list, string fieldName)
         {
@@ -283,7 +315,7 @@ namespace Microsoft.SharePoint.Client
             return result.Any();
         }
 
-        internal static async Task CreatePeoplePickerField(
+        private static async Task<FieldUser> AddPeoplePickerField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName
@@ -309,43 +341,72 @@ namespace Microsoft.SharePoint.Client
             userField.AllowMultipleValues = allowMultipleValues;
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return userField;
         }
 
-        public static async Task CreatePeopleOnlyMultiField(
-            this List list
-            , string fieldInternalName
-            , string fieldDisplayName) =>
-            await CreatePeoplePickerField(list, fieldInternalName, fieldDisplayName, true, FieldUserSelectionMode.PeopleOnly);
+        public static async Task<FieldUser> AddPeopleOnlyMultiField(this List list, string fieldDisplayName) =>
+            await AddPeopleOnlyMultiField(list, fieldDisplayName, fieldDisplayName);
 
-        public static async Task CreatePeopleOnlyField(
+        public static async Task<FieldUser> AddPeopleOnlyMultiField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName) =>
-            await CreatePeoplePickerField(list, fieldInternalName, fieldDisplayName, false, FieldUserSelectionMode.PeopleOnly);
+            await AddPeoplePickerField(list, fieldInternalName, fieldDisplayName, true, FieldUserSelectionMode.PeopleOnly);
 
-        public static async Task CreateGroupOnlyField(
-            this List list
-            , string fieldInternalName
-            , string fieldDisplayName) =>
-            await CreatePeoplePickerField(list, fieldInternalName, fieldDisplayName, false, FieldUserSelectionMode.GroupsOnly);
+        public static async Task<FieldUser> AddPeopleOnlyField(
+           this List list
+           , string fieldDisplayName) =>
+           await AddPeopleOnlyField(list, fieldDisplayName, fieldDisplayName);
 
-        public static async Task CreateGroupOnlyMultiField(
+        public static async Task<FieldUser> AddPeopleOnlyField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName) =>
-            await CreatePeoplePickerField(list, fieldInternalName, fieldDisplayName, true, FieldUserSelectionMode.GroupsOnly);
+            await AddPeoplePickerField(list, fieldInternalName, fieldDisplayName, false, FieldUserSelectionMode.PeopleOnly);
 
-        public static async Task CreatePeopleAndGroupMultiField(
-            this List list
-            , string fieldInternalName
-            , string fieldDisplayName) =>
-            await CreatePeoplePickerField(list, fieldInternalName, fieldDisplayName, true, FieldUserSelectionMode.PeopleAndGroups);
+        public static async Task<FieldUser> AddGroupOnlyField(this List list, string fieldDisplayName) =>
+            await AddGroupOnlyField(list, fieldDisplayName, fieldDisplayName);
 
-        public static async Task CreatePeopleAndGroupField(
+        public static async Task<FieldUser> AddGroupOnlyField(
             this List list
             , string fieldInternalName
             , string fieldDisplayName) =>
-            await CreatePeoplePickerField(list, fieldInternalName, fieldDisplayName, false, FieldUserSelectionMode.PeopleAndGroups);
+            await AddPeoplePickerField(list, fieldInternalName, fieldDisplayName, false, FieldUserSelectionMode.GroupsOnly);
+
+        public static async Task<FieldUser> AddGroupOnlyMultiField(
+            this List list
+            , string fieldDisplayName) =>
+            await AddGroupOnlyMultiField(list, fieldDisplayName, fieldDisplayName);
+
+
+        public static async Task<FieldUser> AddGroupOnlyMultiField(
+            this List list
+            , string fieldInternalName
+            , string fieldDisplayName) =>
+            await AddPeoplePickerField(list, fieldInternalName, fieldDisplayName, true, FieldUserSelectionMode.GroupsOnly);
+
+        public static async Task<FieldUser> AddPeopleAndGroupMultiField(
+            this List list
+            , string fieldDisplayName) =>
+            await AddPeopleAndGroupMultiField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<FieldUser> AddPeopleAndGroupMultiField(
+            this List list
+            , string fieldInternalName
+            , string fieldDisplayName) =>
+            await AddPeoplePickerField(list, fieldInternalName, fieldDisplayName, true, FieldUserSelectionMode.PeopleAndGroups);
+
+        public static async Task<FieldUser> AddPeopleAndGroupField(
+            this List list
+            , string fieldDisplayName) =>
+            await AddPeopleAndGroupField(list, fieldDisplayName, fieldDisplayName);
+
+        public static async Task<FieldUser> AddPeopleAndGroupField(
+            this List list
+            , string fieldInternalName
+            , string fieldDisplayName) =>
+            await AddPeoplePickerField(list, fieldInternalName, fieldDisplayName, false, FieldUserSelectionMode.PeopleAndGroups);
 
     }
 }

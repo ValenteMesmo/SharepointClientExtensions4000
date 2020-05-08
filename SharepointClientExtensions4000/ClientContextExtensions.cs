@@ -6,13 +6,21 @@ namespace Microsoft.SharePoint.Client
 {
     public static class ClientContextExtensions
     {
-        public static async Task CreateList(this ClientContext context, string internalName, string displayName) =>
+        public static async Task<List> CreateList(
+            this ClientContext context, string internalName, string displayName) =>
             await CreateList(context, internalName, displayName, documentLibrary: false, hidden: false);
 
-        public static async Task CreateLibrary(this ClientContext context, string internalName, string displayName) =>
+        public static async Task<List> CreateList(
+            this ClientContext context, string displayName) =>
+            await CreateList(context, displayName, displayName, documentLibrary: false, hidden: false);
+
+        public static async Task<List> CreateLibrary(this ClientContext context, string internalName, string displayName) =>
             await CreateList(context, internalName, displayName, documentLibrary: true, hidden: false);
 
-        internal static async Task CreateList(this ClientContext clientContext, string internalName, string displayName, bool documentLibrary, bool hidden)
+        public static async Task<List> CreateLibrary(this ClientContext context, string displayName) =>
+            await CreateList(context, displayName, displayName, documentLibrary: true, hidden: false);
+
+        private static async Task<List> CreateList(this ClientContext clientContext, string internalName, string displayName, bool documentLibrary, bool hidden)
         {
             if (await clientContext.ListExists(displayName))
                 throw new Exception($@"""{displayName}"" list already exists!");
@@ -44,6 +52,8 @@ namespace Microsoft.SharePoint.Client
             list.AllowDeletion = false;
             list.Update();
             await clientContext.ExecuteQueryAsync();
+
+            return list;
         }
 
         public static async Task RenameList(this ClientContext clientContext, string currentDisplayName, string newDisplayName)
