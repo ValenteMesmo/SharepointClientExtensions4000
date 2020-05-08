@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.SharePoint.Client
 {
+    //https://docs.microsoft.com/en-us/sharepoint/dev/schema/field-element-field
     public static class FieldCreationExtensions
     {
         public static async Task<FieldText> AddTextField(this List list, string fieldDisplayName) =>
@@ -56,12 +57,11 @@ namespace Microsoft.SharePoint.Client
                     $@"""{list.Title}"" list already have a ""{fieldDisplayName}"" field!");
 
             var field = list.Fields.AddFieldAsXml(
-                $@"<Field Type='DateTime' Format='DateTime' DisplayName='{fieldInternalName}'></Field>"
+                $@"<Field Type='DateTime' Format='DateOnly' DisplayName='{fieldInternalName}'></Field>"
                 , true
                 , AddFieldOptions.AddFieldInternalNameHint
             );
-
-            field.Title = fieldDisplayName;
+            field.Title = fieldDisplayName;            
             field.Update();
             list.Update();
             await clientContext.ExecuteQueryAsync();
