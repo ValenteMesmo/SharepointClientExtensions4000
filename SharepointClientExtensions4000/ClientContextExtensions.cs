@@ -8,41 +8,45 @@ namespace Microsoft.SharePoint.Client
     {
         public static async Task<List> CreateList(
             this ClientContext context, string internalName, string displayName) =>
-            await CreateList(context, internalName, displayName, documentLibrary: false, hidden: false);
+            await CreateList(context, internalName, displayName, ListTemplateType.GenericList, hidden: false);
 
         public static async Task<List> CreateList(
             this ClientContext context, string displayName) =>
-            await CreateList(context, displayName, displayName, documentLibrary: false, hidden: false);
+            await CreateList(context, displayName, displayName, ListTemplateType.GenericList, hidden: false);
 
         public static async Task<List> CreateLibrary(this ClientContext context, string internalName, string displayName) =>
-            await CreateList(context, internalName, displayName, documentLibrary: true, hidden: false);
+            await CreateList(context, internalName, displayName, ListTemplateType.DocumentLibrary, hidden: false);
 
         public static async Task<List> CreateLibrary(this ClientContext context, string displayName) =>
-            await CreateList(context, displayName, displayName, documentLibrary: true, hidden: false);
+            await CreateList(context, displayName, displayName, ListTemplateType.DocumentLibrary, hidden: false);
 
-        private static async Task<List> CreateList(this ClientContext clientContext, string internalName, string displayName, bool documentLibrary, bool hidden)
+        public static async Task<List> CreatePageLibrary(this ClientContext context, string displayName) =>
+           await CreateList(context, displayName, displayName, ListTemplateType.WebPageLibrary, hidden: false);
+
+        public static async Task<List> CreatePageLibrary(this ClientContext context, string internalName, string displayName) =>
+           await CreateList(context, internalName, displayName, ListTemplateType.WebPageLibrary, hidden: false);
+
+
+        private static async Task<List> CreateList(this ClientContext clientContext, string internalName, string displayName, ListTemplateType type, bool hidden)
         {
             if (await clientContext.ListExists(displayName))
                 throw new Exception($@"""{displayName}"" list already exists!");
 
             ListCreationInformation listCreationInfo = new ListCreationInformation();
             listCreationInfo.Title = displayName;
-            listCreationInfo.TemplateType = (int)(documentLibrary ?
-                ListTemplateType.DocumentLibrary
-                : ListTemplateType.GenericList
-            );
+            listCreationInfo.TemplateType = (int)type;
 
-            if (documentLibrary)
-                listCreationInfo.Url = internalName;
-            else
+            if (type == ListTemplateType.GenericList)
                 listCreationInfo.Url = "Lists/" + internalName;
+            else
+                listCreationInfo.Url = internalName;
 
             List list = clientContext.Web.Lists.Add(listCreationInfo);
 
-            if (documentLibrary)
-                list.ImageUrl = "/_layouts/15/images/itdl.gif?rev=45";
-            else
+            if (type == ListTemplateType.GenericList)
                 list.ImageUrl = "/_layouts/15/images/itgen.gif?rev=45";
+            else
+                list.ImageUrl = "/_layouts/15/images/itdl.gif?rev=45";
 
             list.Hidden = hidden;
             list.EnableAttachments = false;
