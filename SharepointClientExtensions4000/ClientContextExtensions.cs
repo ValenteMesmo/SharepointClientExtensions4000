@@ -71,6 +71,9 @@ namespace Microsoft.SharePoint.Client
 
         public static async Task DeleteList(this ClientContext clientContext, string listDisplayName)
         {
+            if (!await clientContext.ListExists(listDisplayName))
+                return;
+
             var list = await clientContext.GetList(listDisplayName);
             list.AllowDeletion = true;
             list.Update();
