@@ -26,6 +26,11 @@ namespace Microsoft.SharePoint.Client
         public static async Task<List> CreatePageLibrary(this ClientContext context, string internalName, string displayName) =>
            await CreateList(context, internalName, displayName, ListTemplateType.WebPageLibrary, hidden: false);
 
+        public static async Task<List> CreateCalendar(this ClientContext context, string internalName) =>
+           await CreateList(context, internalName, internalName, ListTemplateType.Events, hidden: false);
+
+        public static async Task<List> CreateCalendar(this ClientContext context, string internalName, string displayName) =>
+           await CreateList(context, internalName, displayName, ListTemplateType.Events, hidden: false);
 
         private static async Task<List> CreateList(this ClientContext clientContext, string internalName, string displayName, ListTemplateType type, bool hidden)
         {
@@ -38,14 +43,14 @@ namespace Microsoft.SharePoint.Client
 
             if (type == ListTemplateType.GenericList)
                 listCreationInfo.Url = "Lists/" + internalName;
-            else
+            else 
                 listCreationInfo.Url = internalName;
 
             List list = clientContext.Web.Lists.Add(listCreationInfo);
-
+            
             if (type == ListTemplateType.GenericList)
                 list.ImageUrl = "/_layouts/15/images/itgen.gif?rev=45";
-            else
+            else if (type == ListTemplateType.DocumentLibrary)
                 list.ImageUrl = "/_layouts/15/images/itdl.gif?rev=45";
 
             list.Hidden = hidden;

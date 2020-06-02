@@ -87,6 +87,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientContextExtensions.cs" />
+    <Compile Include="FileExtensions.cs" />
     <Compile Include="GroupExtensions.cs" />
     <Compile Include="ListItemExtensions.cs" />
     <Compile Include="Role.cs" />
