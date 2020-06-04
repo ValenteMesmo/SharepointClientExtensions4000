@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Microsoft.SharePoint.Client
@@ -49,7 +50,7 @@ namespace Microsoft.SharePoint.Client
             return items.Count > 0;
         }
 
-        public static async Task UploadFile(this List list, byte[] content, string fileUrl)
+        public static async Task<File> UploadFile(this List list, byte[] content, string fileUrl)
         {
             list.Context.Load(list.RootFolder);
             await list.Context.ExecuteQueryAsync();
@@ -73,24 +74,35 @@ namespace Microsoft.SharePoint.Client
             var uploadFile = list.RootFolder.Files.Add(fileCreationInfo);
             list.Context.Load(uploadFile);
             await list.Context.ExecuteQueryAsync();
+
+            return uploadFile;
         }
-        
+
         public static async Task CreateFolder(this List list, string folderName)
         {
-            var completeRelativePath = string.Format(
-                "{0}/{1}"
-                , list.RootFolder.ServerRelativeUrl
-                , folderName
-            );
+            list.Context.Load(list.RootFolder);
+            await list.Context.ExecuteQueryAsync();
 
-            completeRelativePath = completeRelativePath
+            folderName = folderName
               .Replace(@"\", @"/")
               .Replace(@"//", @"/");
 
-            list.RootFolder.Folders.Add(completeRelativePath);
+            AddFolter(list.RootFolder, folderName);
             list.RootFolder.Update();
 
             await list.Context.ExecuteQueryAsync();
-        }       
+        }
+
+        private static void AddFolter(Folder folder, string path)
+        {
+            var segments = path.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (!segments.Any())
+                return;
+
+            var newFolder = folder.Folders.Add(segments.First());
+
+            AddFolter(newFolder, string.Join("/", segments.Skip(1)));
+        }
+
     }
 }
