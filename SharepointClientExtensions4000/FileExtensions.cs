@@ -50,6 +50,27 @@ namespace Microsoft.SharePoint.Client
             return items.Count > 0;
         }
 
+        public static async Task<File> GetFile(this List list, string fileUrl)
+        {
+            list.Context.Load(list.RootFolder);
+            await list.Context.ExecuteQueryAsync();
+
+            var completeRelativePath = string.Format(
+                "{0}/{1}"
+                , list.RootFolder.ServerRelativeUrl
+                , fileUrl
+            );
+            completeRelativePath = completeRelativePath
+              .Replace(@"\", @"/")
+              .Replace(@"//", @"/");
+            var context = list.Context;
+            var file = list.ParentWeb.GetFileByServerRelativeUrl(completeRelativePath);
+
+            context.Load(file);
+            await context.ExecuteQueryAsync();
+            return file;
+        }
+
         public static async Task<File> UploadFile(this List list, byte[] content, string fileUrl)
         {
             list.Context.Load(list.RootFolder);
