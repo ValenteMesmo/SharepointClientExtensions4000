@@ -6,6 +6,7 @@ namespace Microsoft.SharePoint.Client
 {
     public static class FileExtensions
     {
+        //TODO: fix bug with nested folders
         public static async Task<bool> FolderExists(this List list, string folderUrl)
         {
             var folders = list.GetItems(CamlQuery.CreateAllFoldersQuery());
@@ -108,21 +109,21 @@ namespace Microsoft.SharePoint.Client
               .Replace(@"\", @"/")
               .Replace(@"//", @"/");
 
-            AddFolter(list.RootFolder, folderName);
-            list.RootFolder.Update();
+            await AddFolter(list.RootFolder, folderName);
 
             await list.Context.ExecuteQueryAsync();
         }
 
-        private static void AddFolter(Folder folder, string path)
+        private static async Task AddFolter(Folder folder, string path)
         {
             var segments = path.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             if (!segments.Any())
                 return;
 
             var newFolder = folder.Folders.Add(segments.First());
-
-            AddFolter(newFolder, string.Join("/", segments.Skip(1)));
+            folder.Update();
+            await folder.Context.ExecuteQueryAsync();
+            await AddFolter(newFolder, string.Join("/", segments.Skip(1)));
         }
 
     }
