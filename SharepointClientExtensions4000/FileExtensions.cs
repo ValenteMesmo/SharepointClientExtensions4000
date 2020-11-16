@@ -6,7 +6,7 @@ namespace Microsoft.SharePoint.Client
 {
     public static class FileExtensions
     {
-        //TODO: fix bug with nested folders
+        //TODO: fix bug with nested folders 
         public static async Task<bool> FolderExists(this List list, string folderUrl)
         {
             var folders = list.GetItems(CamlQuery.CreateAllFoldersQuery());

@@ -49,7 +49,7 @@ namespace Microsoft.SharePoint.Client
             await clientContext.ExecuteQueryAsync();
         }
 
-        public static async Task<IList<ListItem>> GetAllItems(this List list, IProgress<int> progress = null)
+        public static async Task<IList<ListItem>> GetAllItems(this List list, string query, IProgress<int> progress = null)
         {
             if (progress == null)
                 progress = new Progress<int>();
@@ -67,14 +67,7 @@ namespace Microsoft.SharePoint.Client
                 {
                     ListItemCollectionPosition = itemPosition,
 
-                    ViewXml =
-                    "<View>"
-                        + "<ViewFields>"
-                            + "<FieldRef Name='ID' />"
-                            + "<FieldRef Name='Title' />"
-                        + "</ViewFields>"
-                    + "<RowLimit>5000</RowLimit>"
-                   + "</View>"
+                    ViewXml = query
                 };
 
                 var itemCollection = list.GetItems(camlQuery);
@@ -95,6 +88,27 @@ namespace Microsoft.SharePoint.Client
             progress.Report(100);
 
             return result;
+        }
+
+        public static async Task<IList<ListItem>> GetAllItems(this List list, IProgress<int> progress = null) =>
+            await list.GetAllItems(new[] { "ID", "Title" }, progress);
+
+        public static async Task<IList<ListItem>> GetAllItems(this List list, string[] viewFields, IProgress<int> progress = null)
+        {
+            var fields = "";
+
+            foreach (var field in viewFields)
+                fields += $"<FieldRef Name='{field}' />";
+
+            var view = $@"
+                <View>
+                    <ViewFields>
+                        {fields}
+                    </ViewFields>
+                    <RowLimit>5000</RowLimit>
+                </View>";
+
+            return await list.GetAllItems(view, progress);
         }
 
         public static async Task DeleteAllItems(this List list, IProgress<int> progress = null)
