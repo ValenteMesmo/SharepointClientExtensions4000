@@ -18,7 +18,7 @@ namespace Microsoft.SharePoint.Client
         /// Example: <code>new { Title= "Example", Test = true }</code>
         /// </para>
         /// </param>
-        public static async Task AddItem(
+        public static async Task<ListItem> AddItem(
             this List list
             , dynamic itemProperties)
         {
@@ -30,6 +30,8 @@ namespace Microsoft.SharePoint.Client
 
             newItem.Update();
             await list.Context.AsClientContext().ExecuteQueryAsync();
+
+            return newItem;
         }
 
         private static int OneIfZero(this int value)
