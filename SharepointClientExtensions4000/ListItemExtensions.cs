@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
@@ -69,18 +70,32 @@ namespace Microsoft.SharePoint.Client
                 var camlQuery = new CamlQuery
                 {
                     ListItemCollectionPosition = itemPosition,
-
                     ViewXml = query
                 };
 
                 var itemCollection = list.GetItems(camlQuery);
 
-                context.Load(itemCollection, f => f.ListItemCollectionPosition);
+                {
+                    var retrievalsList = (retrievals ?? new Expression<Func<ListItemCollection, object>>[] { }).ToList();
+                    retrievalsList.Add(f => f.ListItemCollectionPosition);
 
-                if (retrievals != null)
-                    context.Load(itemCollection, retrievals);
+                    context.Load(itemCollection, retrievalsList.ToArray());
+                }
 
-                await context.ExecuteQueryAsync();
+                try
+                {
+                    await context.ExecuteQueryAsync();
+                }
+                catch (ServerException ex)
+
+                {
+                    if (ex.Message.Contains("threshold"))
+                        throw new Exception(@"List view threshold problem!
+If you are using a custom query, make sure to set rowLimit.
+If rowLimit is not enough to solve, create a index on your list and use that column on your query.");
+                    else
+                        throw;
+                }
 
                 itemPosition = itemCollection.ListItemCollectionPosition;
 
@@ -113,7 +128,7 @@ namespace Microsoft.SharePoint.Client
                     <ViewFields>
                         {fields}
                     </ViewFields>
-                    <RowLimit>5000</RowLimit>
+                    <RowLimit>3000</RowLimit>
                 </View>";
 
             return await list.GetAllItems(view, progress, retrievals);
