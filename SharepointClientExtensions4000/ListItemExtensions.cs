@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Microsoft.SharePoint.Client
@@ -51,7 +52,7 @@ namespace Microsoft.SharePoint.Client
             await clientContext.ExecuteQueryAsync();
         }
 
-        public static async Task<IList<ListItem>> GetAllItems(this List list, string query, IProgress<int> progress = null)
+        public static async Task<IList<ListItem>> GetAllItems(this List list, string query, IProgress<int> progress = null, params Expression<Func<ListItemCollection, object>>[] retrievals)
         {
             if (progress == null)
                 progress = new Progress<int>();
@@ -73,7 +74,12 @@ namespace Microsoft.SharePoint.Client
                 };
 
                 var itemCollection = list.GetItems(camlQuery);
-                context.Load(itemCollection);
+
+                context.Load(itemCollection, f => f.ListItemCollectionPosition);
+
+                if (retrievals != null)
+                    context.Load(itemCollection, retrievals);
+
                 await context.ExecuteQueryAsync();
 
                 itemPosition = itemCollection.ListItemCollectionPosition;
@@ -92,10 +98,10 @@ namespace Microsoft.SharePoint.Client
             return result;
         }
 
-        public static async Task<IList<ListItem>> GetAllItems(this List list, IProgress<int> progress = null) =>
-            await list.GetAllItems(new[] { "ID", "Title" }, progress);
+        public static async Task<IList<ListItem>> GetAllItems(this List list, IProgress<int> progress = null, params Expression<Func<ListItemCollection, object>>[] retrievals) =>
+            await list.GetAllItems(new[] { "ID", "Title" }, progress, retrievals);
 
-        public static async Task<IList<ListItem>> GetAllItems(this List list, string[] viewFields, IProgress<int> progress = null)
+        public static async Task<IList<ListItem>> GetAllItems(this List list, string[] viewFields, IProgress<int> progress = null, params Expression<Func<ListItemCollection, object>>[] retrievals)
         {
             var fields = "";
 
@@ -110,7 +116,7 @@ namespace Microsoft.SharePoint.Client
                     <RowLimit>5000</RowLimit>
                 </View>";
 
-            return await list.GetAllItems(view, progress);
+            return await list.GetAllItems(view, progress, retrievals);
         }
 
         public static async Task DeleteAllItems(this List list, IProgress<int> progress = null)
